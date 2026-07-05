@@ -8,59 +8,35 @@ using backend.Models;
 using backend.DTOs.User;
 using Microsoft.EntityFrameworkCore;
 using backend.Services.User;
+using backend.DTOs.Api;
+using backend.wrapper;
 
 namespace backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/user")]
     public class UserController : ControllerBase
     {
-        private readonly AppDbContext _context ;
         private readonly IUserService userService;
 
-        public UserController(AppDbContext context, IUserService userService)
+        public UserController( IUserService userService)
         {
-            _context = context;
             this.userService = userService;
         }
-        // [HttpGet("/")]
-        // public IActionResult GetUsers()
-        // {
-        //     // Implementation for getting users
 
-        // }
-
-        [HttpGet("test-db")]
-        public async Task<IActionResult> TestDB()
-        {
-            try
-            {
-                var canConnect = await _context.Database.CanConnectAsync();
-                if (canConnect)
-                {
-                    return Ok("Database connection successful.");
-                }
-                else
-                {
-                    return StatusCode(500, "Database connection failed.");
-                }
-            }catch(Exception ex)
-            {
-                return StatusCode(500, $"Database connection failed: {ex}");
-            }
-        }
-
+        //Function to create a new user
         [HttpPost("")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
             // Implementation for creating a new user
             
-            var user = await userService.Create(request);
+            var createdUser = await userService.Create(request);
            
-            var createdUser = await _context.Users.Include(u=> u.Role).FirstOrDefaultAsync(u => u.Id == user.Id);
-            return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, createdUser);
+            return CreatedAtAction(nameof(GetUsers), new { id = createdUser.Id }, createdUser);
         }
 
+        
+        //Function to update an existing user
         [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
@@ -68,6 +44,8 @@ namespace backend.Controllers
             return Ok(user);
         }
 
+
+        //Function to get a user by id
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(int id)
         {
@@ -76,21 +54,50 @@ namespace backend.Controllers
             {
                 return NotFound($"User with id {id} not found.");
             }
-            return Ok(user);
+
+            var response = new APIResponse<User>
+            {
+                success = true,
+                message = "User retrieved successfully.",
+                data = user
+            };
+            return Ok(response);
         }
 
+        //Function to index all users
         [HttpGet("")]
-        public IActionResult GetUsers(int page = 1, int pageSize = 10, string? search = null)
+        public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 10, string? search = null)
         {
-            var users = _context.Users.Where(
-                u=> u.Username.Contains(search ?? "") || 
-                u.Name.Contains(search ?? "")
-                )
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
+            var users = await userService.GetUsers(page, pageSize, search);
 
-            return Ok(users);
+            var response = new APIResponse<IEnumerable<Models.User>>
+            {
+                success = true,
+                message = "Users retrieved successfully.",
+                data = users.Items,
+                pagination = users.pagination
+            };
+
+            return Ok(response);
+        }
+
+        [HttpDelete("softDelete")]
+        public async Task<IActionResult> SoftDeleteUser(int id)
+        {
+            var success = await userService.SoftDelete(id);
+            
+            var response = new APIResponse<Models.User>
+            {
+                success = success,
+                message = success ? "Deleted Successfully" : "Deleted failed"
+            };
+            if (success)
+            {
+                return Ok(response);
+            }else{
+                return BadRequest(response);
+            }
+            
         }
     }
 }

@@ -4,7 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using backend.Data;
 using backend.Models;
+using backend.DTOs.Api;
 using backend.DTOs.User;
+using Microsoft.EntityFrameworkCore;
+using backend.wrapper;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace backend.Services.User
 {
@@ -14,6 +18,36 @@ namespace backend.Services.User
          public UserService(AppDbContext context)
         {
             dbContext = context;
+        }
+
+        public async Task<PagedResult<Models.User>> GetUsers(int page, int pageSize,string? search = null)
+        {
+            var query = dbContext.Users.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(u=> u.Username.Contains(search) || u.Name.Contains(search));
+            }
+            
+            var totalItems = await query.CountAsync();
+
+            var users = await query.Include(u=> u.Role)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+            return new PagedResult<Models.User>
+            {
+                Items = users,
+                pagination = new Pagination
+                {
+                    page = page,
+                    pageSize = pageSize,
+                    total = totalItems,
+                    totalPages =(int) Math.Ceiling((double)totalItems / pageSize),
+                    hasNextPage = page * pageSize < totalItems,
+                    hasPreviousPage = page > 1
+                }
+            };
         }
         public async Task<Models.User> Create(CreateUserRequest request)
         {
@@ -28,6 +62,7 @@ namespace backend.Services.User
             user.Password = request.Password;
             user.isActive = request.IsActive;
             user.RoleId = request.RoleId;
+            
             dbContext.Users.Add(user);
             await dbContext.SaveChangesAsync();
 
