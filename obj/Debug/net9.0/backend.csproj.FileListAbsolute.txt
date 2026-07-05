@@ -1,0 +1,7 @@
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.csproj.AssemblyReference.cache
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.GeneratedMSBuildEditorConfig.editorconfig
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.AssemblyInfoInputs.cache
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.AssemblyInfo.cs
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.csproj.CoreCompileInputs.cache
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.MvcApplicationPartsAssemblyInfo.cs
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.MvcApplicationPartsAssemblyInfo.cache
