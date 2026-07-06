@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using backend.Middleware;
+using backend.Services.Auth;
+using backend.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,15 +63,22 @@ builder.Services.AddSwaggerGen(c=>
         }
     );
 });
+
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33)))
 );
 builder.Services.AddControllers(); // Add this line to register controllers
 
-// Register UserService
+//Register Helpers
+builder.Services.AddScoped<GenerateToken>();
+
+// Register Services
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAuthService, AuthService>();    
 
 var app = builder.Build();
+// app.UseMiddleware<JwtMiddleware>();
 
 app.MapControllers(); // Add this line to map controller routes
 

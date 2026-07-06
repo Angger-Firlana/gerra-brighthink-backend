@@ -81,6 +81,7 @@ namespace backend.Controllers
             return Ok(response);
         }
 
+        //function Soft delete user
         [HttpDelete("softDelete")]
         public async Task<IActionResult> SoftDeleteUser(int id)
         {

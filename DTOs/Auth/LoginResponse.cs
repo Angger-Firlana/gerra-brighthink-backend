@@ -8,9 +8,11 @@ namespace backend.DTOs.Auth
 {
     public class LoginResponse
     {
-        public required string Token { get; set; }
-        public required Models.User user { get; set; }
-        public required DateTime expiredAt { get; set; }
+        public string? token { get; set; }
+        public int code {get; set;}
+        public string? message {get; set;}
+        public Models.User? user { get; set; }
+        public DateTime expiredAt { get; set; }
 
     }
 }

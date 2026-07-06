@@ -56,10 +56,11 @@ namespace backend.Services.User
             {
                 throw new ArgumentException("Username, Name, Email, and Password cannot be null or empty.");
             }
+            var password = BCrypt.Net.BCrypt.HashPassword(request.Password);
             user.Username = request.Username;
             user.Name = request.Name;
             user.Email = request.Email;
-            user.Password = request.Password;
+            user.Password = password;
             user.isActive = request.IsActive;
             user.RoleId = request.RoleId;
             
@@ -99,7 +100,8 @@ namespace backend.Services.User
                 }
                 if (!string.IsNullOrEmpty(request.Password))
                 {
-                    user.Password = request.Password;
+                    var password = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                    user.Password = password;
                 }
                 if (request.IsActive.HasValue)
                 {

@@ -8,7 +8,7 @@ namespace backend.Services.Auth
 {
     public interface IAuthService
     {
-        Task<LoginResponse> Login(string username, string password);
-        
+        Task<LoginResponse> Login(string identity, string password);
+        Task<Models.User> GetMe();
     }
 }

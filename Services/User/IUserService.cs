@@ -10,7 +10,7 @@ namespace backend.Services.User
 {
     public interface IUserService
     {
-        Task<PagedResult<Models.User>> GetUsers(int page, int pageSize, string search);
+        Task<PagedResult<Models.User>> GetUsers(int page, int pageSize, string? search);
         Task<Models.User> Create(CreateUserRequest request);
 
         Task<Models.User?> GetById(int id);

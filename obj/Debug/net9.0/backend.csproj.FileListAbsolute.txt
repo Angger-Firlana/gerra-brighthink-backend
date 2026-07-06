@@ -130,3 +130,4 @@
 /run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.pdb
 /run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/backend.genruntimeconfig.cache
 /run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/Debug/net9.0/ref/backend.dll
+/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/bin/Debug/net9.0/BCrypt-Net-Next.dll

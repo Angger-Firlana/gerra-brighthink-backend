@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "Ne+Sr/+grao=",
+  "dgSpecHash": "iyckZW9TwUw=",
   "success": true,
   "projectFilePath": "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj",
   "expectedPackageFiles": [
+    "/home/gerra/.nuget/packages/bcrypt.net-next/4.2.0/bcrypt.net-next.4.2.0.nupkg.sha512",
     "/home/gerra/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/gerra/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.0/microsoft.aspnetcore.authentication.jwtbearer.9.0.0.nupkg.sha512",
     "/home/gerra/.nuget/packages/microsoft.bcl.asyncinterfaces/7.0.0/microsoft.bcl.asyncinterfaces.7.0.0.nupkg.sha512",
