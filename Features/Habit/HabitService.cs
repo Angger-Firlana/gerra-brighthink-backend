@@ -1,6 +1,8 @@
 using backend.Data;
 using backend.DTOs.Api;
 using backend.DTOs.Habit;
+using backend.Enum;
+using backend.Features.ActivityLog;
 using backend.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +11,12 @@ namespace backend.Features.Habit;
 public class HabitService : IHabitService
 {
     private readonly AppDbContext dbContext;
+    private readonly IActivityLogService activityLog;
 
-    public HabitService(AppDbContext dbContext)
+    public HabitService(AppDbContext dbContext, IActivityLogService activityLog)
     {
         this.dbContext = dbContext;
+        this.activityLog = activityLog;
     }
 
     public async Task<PagedResult<Models.Habit>> Index(HabitFilteringRequest filter, int userId)
@@ -80,6 +84,8 @@ public class HabitService : IHabitService
         dbContext.Habits.Add(habit);
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, habit.Id, EntityType.Habit, "created");
+
         return habit;
     }
 
@@ -105,6 +111,8 @@ public class HabitService : IHabitService
         habit.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, id, EntityType.Habit, "updated");
+
         return habit;
     }
 
@@ -118,6 +126,9 @@ public class HabitService : IHabitService
 
         habit.DeletedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Habit, "deleted");
+
         return true;
     }
 
@@ -131,6 +142,9 @@ public class HabitService : IHabitService
 
         dbContext.Habits.Remove(habit);
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Habit, "deleted_hard");
+
         return true;
     }
 }

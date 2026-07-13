@@ -11,6 +11,7 @@ public class Goal
     public User? User {get; set;}
     public string Title {get; set;} = string.Empty;
     public GoalStatus Status {get; set;}
+    public List<Task>? Tasks {get; set;}
 
     [Column("created_at")]
     public DateTime? CreatedAt {get; set;}

@@ -1,6 +1,8 @@
 using backend.Data;
 using backend.DTOs.Api;
 using backend.DTOs.Task;
+using backend.Enum;
+using backend.Features.ActivityLog;
 using backend.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +11,12 @@ namespace backend.Features.Task;
 public class TaskService : ITaskService
 {
     private readonly AppDbContext dbContext;
+    private readonly IActivityLogService activityLog;
 
-    public TaskService(AppDbContext dbContext)
+    public TaskService(AppDbContext dbContext, IActivityLogService activityLog)
     {
         this.dbContext = dbContext;
+        this.activityLog = activityLog;
     }
 
     public async Task<PagedResult<Models.Task>> Index(TaskFilteringRequest filter, int userId)
@@ -103,6 +107,8 @@ public class TaskService : ITaskService
         dbContext.Tasks.Add(task);
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, task.Id, EntityType.Task, "created");
+
         return task;
     }
 
@@ -132,6 +138,8 @@ public class TaskService : ITaskService
         task.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(id, id, EntityType.Task, "updated");
+
         return task;
     }
 
@@ -145,6 +153,9 @@ public class TaskService : ITaskService
 
         task.DeletedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Task, "deleted");
+
         return true;
     }
 
@@ -158,10 +169,13 @@ public class TaskService : ITaskService
 
         dbContext.Tasks.Remove(task);
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Task, "deleted_hard");
+
         return true;
     }
 
-    // --- SubTask ---
+    // --- SubTask (with logs) ---
 
     public async Task<Models.SubTask> AddSubTask(int taskId, CreateSubTaskRequest request, int userId)
     {
@@ -186,6 +200,8 @@ public class TaskService : ITaskService
         dbContext.SubTasks.Add(subTask);
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, subTask.Id, EntityType.SubTask, "created");
+
         return subTask;
     }
 
@@ -206,6 +222,8 @@ public class TaskService : ITaskService
         subTask.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, subTaskId, EntityType.SubTask, "updated");
+
         return subTask;
     }
 
@@ -220,6 +238,9 @@ public class TaskService : ITaskService
 
         subTask.DeletedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, subTaskId, EntityType.SubTask, "deleted");
+
         return true;
     }
 }

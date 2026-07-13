@@ -1,6 +1,8 @@
 using backend.Data;
 using backend.DTOs.Api;
 using backend.DTOs.Goal;
+using backend.Enum;
+using backend.Features.ActivityLog;
 using backend.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +11,12 @@ namespace backend.Features.Goal;
 public class GoalService : IGoalService
 {
     private readonly AppDbContext dbContext;
+    private readonly IActivityLogService activityLog;
 
-    public GoalService(AppDbContext dbContext)
+    public GoalService(AppDbContext dbContext, IActivityLogService activityLog)
     {
         this.dbContext = dbContext;
+        this.activityLog = activityLog;
     }
 
     public async Task<PagedResult<Models.Goal>> Index(GoalFilteringRequest filter, int userId)
@@ -58,6 +62,7 @@ public class GoalService : IGoalService
     public async Task<Models.Goal?> GetById(int id, int userId)
     {
         return await dbContext.Goals
+            .Include(g => g.Tasks!.Where(t => t.DeletedAt == null))
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId && g.DeletedAt == null);
     }
 
@@ -78,6 +83,8 @@ public class GoalService : IGoalService
 
         dbContext.Goals.Add(goal);
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, goal.Id, EntityType.Goal, "created");
 
         return goal;
     }
@@ -100,6 +107,8 @@ public class GoalService : IGoalService
         goal.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
 
+        await activityLog.Log(userId, id, EntityType.Goal, "updated");
+
         return goal;
     }
 
@@ -113,6 +122,9 @@ public class GoalService : IGoalService
 
         goal.DeletedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Goal, "deleted");
+
         return true;
     }
 
@@ -126,6 +138,9 @@ public class GoalService : IGoalService
 
         dbContext.Goals.Remove(goal);
         await dbContext.SaveChangesAsync();
+
+        await activityLog.Log(userId, id, EntityType.Goal, "deleted_hard");
+
         return true;
     }
 }

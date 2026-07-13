@@ -12,6 +12,7 @@ using backend.Features.Task;
 using backend.Features.TaskCategory;
 using backend.Features.Goal;
 using backend.Features.Habit;
+using backend.Features.ActivityLog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +85,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskCategoryService, TaskCategoryService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IHabitService, HabitService>();
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
 var app = builder.Build();
 
