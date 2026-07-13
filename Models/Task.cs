@@ -17,6 +17,7 @@ public class Task
     public TodoStatus Status {get; set;} = TodoStatus.NotStarted;
     public string Priority {get; set;} = string.Empty;
     public string TypeHabbit {get; set;} = string.Empty;
+    public List<SubTask>? SubTasks {get; set;}
 
     [Column("created_at")]
     public DateTime? CreatedAt {get; set;}

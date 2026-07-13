@@ -75,7 +75,7 @@ builder.Services.AddControllers(); // Add this line to register controllers
 builder.Services.AddScoped<GenerateToken>();
 
 // Register Services
-// builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();    
 
