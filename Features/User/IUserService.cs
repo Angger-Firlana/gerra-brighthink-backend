@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using backend.DTOs.User;
-using backend.wrapper;
+using backend.Wrapper;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace backend.Services.User
+namespace backend.Features.User
 {
     public interface IUserService
     {

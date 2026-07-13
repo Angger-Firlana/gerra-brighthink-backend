@@ -1,13 +1,14 @@
 using backend.Data;
 using Microsoft.EntityFrameworkCore;
-using backend.Services.User;
+using backend.Features.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 using backend.Middleware;
-using backend.Services.Auth;
+using backend.Features.Auth;
 using backend.Helpers;
+using backend.Features.Task;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,13 +75,13 @@ builder.Services.AddControllers(); // Add this line to register controllers
 builder.Services.AddScoped<GenerateToken>();
 
 // Register Services
+// builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();    
 
 var app = builder.Build();
-// app.UseMiddleware<JwtMiddleware>();
 
-app.MapControllers(); // Add this line to map controller routes
+app.UseMiddleware<JwtMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -89,30 +90,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

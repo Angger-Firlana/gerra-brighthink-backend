@@ -7,11 +7,12 @@ using backend.Data;
 using backend.Models;
 using backend.DTOs.User;
 using Microsoft.EntityFrameworkCore;
-using backend.Services.User;
 using backend.DTOs.Api;
-using backend.wrapper;
+using backend.Wrapper;
+using backend.Middleware;
+using Microsoft.AspNetCore.Authorization;
 
-namespace backend.Controllers
+namespace backend.Features.User
 {
     [ApiController]
     [Route("api/user")]
@@ -26,6 +27,7 @@ namespace backend.Controllers
 
         //Function to create a new user
         [HttpPost("")]
+        [SkipAuth]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
             // Implementation for creating a new user
@@ -55,7 +57,7 @@ namespace backend.Controllers
                 return NotFound($"User with id {id} not found.");
             }
 
-            var response = new APIResponse<User>
+            var response = new APIResponse<Models.User>
             {
                 success = true,
                 message = "User retrieved successfully.",

@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using backend.Models;
-using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace backend.Models;
 
@@ -13,10 +9,19 @@ public class User
     public string Email {get; set;} = string.Empty;
     public string Username {get; set;} = string.Empty;
     public string Password {get; set;} = string.Empty;
-    public bool isActive {get; set;}
+
+    [Column("isActive")]
+    public bool IsActive {get; set;}
+
     public int RoleId {get; set;}
     public Role? Role {get; set;}
-    public DateTime? created_at {get; set;}
-    public DateTime? updated_at {get; set;}
-    public DateTime? deleted_at {get; set;}
+
+    [Column("created_at")]
+    public DateTime? CreatedAt {get; set;}
+
+    [Column("updated_at")]
+    public DateTime? UpdatedAt {get; set;}
+
+    [Column("deleted_at")]
+    public DateTime? DeletedAt {get; set;}
 }

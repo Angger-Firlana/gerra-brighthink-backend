@@ -1,26 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj": {}
+    "/mnt/01DD00800C4E39D0/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj": {}
   },
   "projects": {
-    "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj": {
+    "/mnt/01DD00800C4E39D0/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj",
+        "projectUniqueName": "/mnt/01DD00800C4E39D0/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj",
         "projectName": "backend",
-        "projectPath": "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj",
-        "packagesPath": "/home/gerra/.nuget/packages/",
-        "outputPath": "/run/media/gerra/New Volume/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/",
+        "projectPath": "/mnt/01DD00800C4E39D0/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/backend.csproj",
+        "packagesPath": "/home/angger/.nuget/packages/",
+        "outputPath": "/mnt/01DD00800C4E39D0/Projek/Sistem Informasi/Project Penting/Gerra ToDo List/backend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/gerra/.nuget/NuGet/NuGet.Config"
+          "/home/angger/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -39,7 +38,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net9.0": {
@@ -79,12 +78,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.NETCore.App.Host.linux-x64",
-              "version": "[9.0.17, 9.0.17]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -93,7 +86,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.109/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.315/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

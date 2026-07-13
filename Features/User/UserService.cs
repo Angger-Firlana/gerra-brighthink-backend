@@ -7,10 +7,9 @@ using backend.Models;
 using backend.DTOs.Api;
 using backend.DTOs.User;
 using Microsoft.EntityFrameworkCore;
-using backend.wrapper;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using backend.Wrapper;
 
-namespace backend.Services.User
+namespace backend.Features.User
 {
     public class UserService : IUserService
     {
@@ -61,7 +60,7 @@ namespace backend.Services.User
             user.Name = request.Name;
             user.Email = request.Email;
             user.Password = password;
-            user.isActive = request.IsActive;
+            user.IsActive = request.IsActive;
             user.RoleId = request.RoleId;
             
             dbContext.Users.Add(user);
@@ -105,7 +104,7 @@ namespace backend.Services.User
                 }
                 if (request.IsActive.HasValue)
                 {
-                    user.isActive = request.IsActive.Value;
+                    user.IsActive = request.IsActive.Value;
                 }
                 if (request.RoleId.HasValue)
                 {
@@ -131,12 +130,12 @@ namespace backend.Services.User
                     throw new ArgumentException($"User with id {id} not found.");
                 }
 
-                user.deleted_at = DateTime.UtcNow;
+                user.DeletedAt = DateTime.UtcNow;
                 await dbContext.SaveChangesAsync();
                 return true;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
-                return false;
                 throw new Exception($"An error occurred while soft deleting the user: {ex.Message}");
             }
            
