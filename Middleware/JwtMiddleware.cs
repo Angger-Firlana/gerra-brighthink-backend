@@ -18,6 +18,13 @@ public class JwtMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Preflight OPTIONS — let CORS middleware handle it
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            await _next(context);
+            return;
+        }
+
         var endpoint = context.GetEndpoint();
 
         // Bypass: [SkipAuth], non-MVC routes (Swagger, static files), or no endpoint yet

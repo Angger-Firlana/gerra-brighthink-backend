@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(rm -rf src/assets/hero.png src/assets/react.svg src/assets/vite.svg src/App.css src/App.tsx src/index.css public/favicon.svg public/icons.svg)",
+      "Bash(npm install *)"
     ]
   }
 }

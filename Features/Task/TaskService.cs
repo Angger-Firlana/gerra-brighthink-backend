@@ -138,7 +138,7 @@ public class TaskService : ITaskService
         task.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
 
-        await activityLog.Log(id, id, EntityType.Task, "updated");
+        await activityLog.Log(userId, id, EntityType.Task, "updated");
 
         return task;
     }

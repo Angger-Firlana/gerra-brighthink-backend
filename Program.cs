@@ -32,6 +32,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "https://app.example.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
@@ -73,7 +83,11 @@ builder.Services.AddSwaggerGen(c=>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33)))
 );
-builder.Services.AddControllers(); // Add this line to register controllers
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 //Register Helpers
 builder.Services.AddScoped<GenerateToken>();
@@ -88,6 +102,9 @@ builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
 var app = builder.Build();
+
+// CORS MUST be before JwtMiddleware — OPTIONS preflight has no auth header
+app.UseCors("AllowSpecificOrigins");
 
 app.UseMiddleware<JwtMiddleware>();
 
