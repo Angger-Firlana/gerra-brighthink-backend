@@ -10,6 +10,8 @@ using backend.Features.Auth;
 using backend.Helpers;
 using backend.Features.Task;
 
+using backend.Features.TaskCategory;
+
 var builder = WebApplication.CreateBuilder(args);
 
 //Add Auth
@@ -77,7 +79,8 @@ builder.Services.AddScoped<GenerateToken>();
 // Register Services
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthService, AuthService>();    
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITaskCategoryService, TaskCategoryService>();
 
 var app = builder.Build();
 
