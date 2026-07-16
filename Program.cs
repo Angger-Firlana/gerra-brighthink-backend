@@ -105,17 +105,26 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 
 var app = builder.Build();
 
-// CORS MUST be before JwtMiddleware — OPTIONS preflight has no auth header
+// 1. Aktifkan Routing duluan biar .NET tahu arah endpoint-nya
+app.UseRouting();
+
+// 2. CORS WAJIB setelah UseRouting dan sebelum Auth/Middleware lain
 app.UseCors("AllowSpecificOrigins");
 
+// 3. Jalankan Custom Middleware lu
 app.UseMiddleware<JwtMiddleware>();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// 4. Aktifkan Authentication & Authorization bawaan .NET (Wajib kalau pake JWT)
+app.UseAuthentication();
+app.UseAuthorization();
+
+// 5. Swagger dipaksa aktif di Production biar lu bisa test
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Gerra ToDo List API V1");
+    c.RoutePrefix = "swagger"; 
+});
 
 app.MapControllers();
 
