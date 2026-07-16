@@ -11,6 +11,7 @@ public class CreateTaskRequest
     public string? TypeHabbit { get; set; }
     public int? GoalId { get; set; }
     public int? TaskCategoryId { get; set; }
+    public DateTime? DueDate { get; set; }
     public List<CreateSubTaskRequest>? SubTasks { get; set; }
 }
 
@@ -23,6 +24,7 @@ public class UpdateTaskRequest
     public string? TypeHabbit { get; set; }
     public int? GoalId { get; set; }
     public int? TaskCategoryId { get; set; }
+    public DateTime? DueDate { get; set; }
 }
 
 public class CreateSubTaskRequest

@@ -21,32 +21,53 @@ public class GoalService : IGoalService
 
     public async Task<PagedResult<Models.Goal>> Index(GoalFilteringRequest filter, int userId)
     {
-        var query = dbContext.Goals
-            .Where(g => g.UserId == userId && g.DeletedAt == null)
-            .AsQueryable();
+        var baseQuery = dbContext.Goals
+            .Where(g => g.UserId == userId && g.DeletedAt == null);
 
         if (!string.IsNullOrWhiteSpace(filter.search))
-            query = query.Where(g => g.Title.Contains(filter.search));
+            baseQuery = baseQuery.Where(g => g.Title.Contains(filter.search));
 
         if (!string.IsNullOrWhiteSpace(filter.status) && int.TryParse(filter.status, out var status))
-            query = query.Where(g => (int)g.Status == status);
+            baseQuery = baseQuery.Where(g => (int)g.Status == status);
 
         if (!string.IsNullOrWhiteSpace(filter.typeGoal))
-            query = query.Where(g => g.TypeGoal == filter.typeGoal);
+            baseQuery = baseQuery.Where(g => g.TypeGoal == filter.typeGoal);
 
-        var totalItems = await query.CountAsync();
+        var totalItems = await baseQuery.CountAsync();
         var page = filter.page > 0 ? filter.page : 1;
         var pageSize = filter.pageSize > 0 ? filter.pageSize : 10;
 
-        var goals = await query
+        // Single query: select Goal + task count from DB without loading Tasks into memory
+        var goalIds = await baseQuery
             .OrderByDescending(g => g.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(g => g.Id)
             .ToListAsync();
+
+        var taskCounts = await dbContext.Tasks
+            .Where(t => goalIds.Contains(t.GoalId!.Value) && t.DeletedAt == null)
+            .GroupBy(t => t.GoalId!.Value)
+            .Select(g => new { GoalId = g.Key, Total = g.Count(), Done = g.Count(t => t.Status == TodoStatus.Completed) })
+            .ToDictionaryAsync(x => x.GoalId, x => (x.Total, x.Done));
+
+        var goals = await dbContext.Goals
+            .Where(g => goalIds.Contains(g.Id))
+            .OrderByDescending(g => g.CreatedAt)
+            .ToListAsync();
+
+        var result = goals.Select(g =>
+        {
+            var (total, done) = taskCounts.TryGetValue(g.Id, out var t) ? t : (0, 0);
+            g.TaskCount = total;
+            g.DoneCount = done;
+            g.Tasks = null;
+            return g;
+        }).ToList();
 
         return new PagedResult<Models.Goal>
         {
-            Items = goals,
+            Items = result,
             pagination = new Pagination
             {
                 page = page,
@@ -77,6 +98,7 @@ public class GoalService : IGoalService
             Title = request.Title,
             TypeGoal = request.TypeGoal,
             Status = request.Status,
+            DueDate = request.DueDate,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -103,6 +125,8 @@ public class GoalService : IGoalService
             goal.TypeGoal = request.TypeGoal;
         if (request.Status.HasValue)
             goal.Status = request.Status.Value;
+        if (request.DueDate.HasValue)
+            goal.DueDate = request.DueDate;
 
         goal.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();

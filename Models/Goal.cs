@@ -11,6 +11,7 @@ public class Goal
     public User? User {get; set;}
     public string Title {get; set;} = string.Empty;
     public GoalStatus Status {get; set;}
+    public DateTime? DueDate {get; set;}
     public List<Task>? Tasks {get; set;}
 
     [Column("created_at")]
@@ -21,4 +22,7 @@ public class Goal
 
     [Column("deleted_at")]
     public DateTime? DeletedAt {get; set;}
+
+    [NotMapped] public int TaskCount { get; set; }
+    [NotMapped] public int DoneCount { get; set; }
 }

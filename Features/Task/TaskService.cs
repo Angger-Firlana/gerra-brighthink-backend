@@ -89,6 +89,7 @@ public class TaskService : ITaskService
             TypeHabbit = request.TypeHabbit ?? string.Empty,
             GoalId = request.GoalId,
             TaskCategoryId = request.TaskCategoryId,
+            DueDate = request.DueDate,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -134,6 +135,8 @@ public class TaskService : ITaskService
             task.GoalId = request.GoalId;
         if (request.TaskCategoryId.HasValue)
             task.TaskCategoryId = request.TaskCategoryId;
+        if (request.DueDate.HasValue)
+            task.DueDate = request.DueDate;
 
         task.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
