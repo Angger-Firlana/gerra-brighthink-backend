@@ -38,7 +38,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://app.example.com")
+        policy.WithOrigins("http://localhost:5173", "https://brighthink.my.id", "http://brighthink.my.id", "http://43.157.241.50", "https://43.157.241.50")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
