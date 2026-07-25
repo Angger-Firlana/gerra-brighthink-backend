@@ -1,5 +1,5 @@
 using backend.Data;
-using Microsoft.EntityFrameworkCore;
+using Dapper;
 
 namespace backend.Features.Role;
 
@@ -11,16 +11,20 @@ public interface IRoleService
 
 public class RoleService : IRoleService
 {
-    private readonly AppDbContext dbContext;
-    public RoleService(AppDbContext dbContext) => this.dbContext = dbContext;
+    private readonly DapperContext _context;
+    public RoleService(DapperContext context) => _context = context;
 
     public async Task<List<Models.Role>> GetAll()
     {
-        return await dbContext.Roles.OrderBy(r => r.Id).ToListAsync();
+        using var db = _context.CreateConnection();
+        var roles = await db.QueryAsync<Models.Role>("SELECT * FROM Roles ORDER BY Id");
+        return roles.AsList();
     }
 
     public async Task<Models.Role?> GetById(int id)
     {
-        return await dbContext.Roles.FirstOrDefaultAsync(r => r.Id == id);
+        using var db = _context.CreateConnection();
+        return await db.QueryFirstOrDefaultAsync<Models.Role>(
+            "SELECT * FROM Roles WHERE Id = @Id", new { Id = id });
     }
 }

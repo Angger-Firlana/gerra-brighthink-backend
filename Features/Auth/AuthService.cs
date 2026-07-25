@@ -1,18 +1,17 @@
+using Dapper;
 using backend.Data;
 using backend.DTOs.Auth;
-using backend.Helpers;
-using Microsoft.EntityFrameworkCore;
 
 namespace backend.Features.Auth;
 
 public class AuthService : IAuthService
 {
-    private readonly AppDbContext dbContext;
-    private readonly GenerateToken generateToken;
+    private readonly DapperContext _context;
+    private readonly Helpers.GenerateToken generateToken;
 
-    public AuthService(AppDbContext dbContext, GenerateToken generateToken)
+    public AuthService(DapperContext context, Helpers.GenerateToken generateToken)
     {
-        this.dbContext = dbContext;
+        _context = context;
         this.generateToken = generateToken;
     }
 
@@ -20,9 +19,22 @@ public class AuthService : IAuthService
     {
         var response = new LoginResponse();
 
-        var user = await dbContext.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(x => x.Email == identity || x.Username == identity);
+        using var db = _context.CreateConnection();
+
+        var users = await db.QueryAsync<Models.User, Models.Role, Models.User>(
+            @"SELECT u.*, r.Id, r.Name FROM Users u
+              INNER JOIN Roles r ON r.Id = u.RoleId
+              WHERE (u.Email = @Identity OR u.Username = @Identity)
+                AND u.deleted_at IS NULL",
+            (user, role) =>
+            {
+                user.Role = role;
+                return user;
+            },
+            new { Identity = identity },
+            splitOn: "Id");
+
+        var user = users.FirstOrDefault();
 
         if (user is null)
         {
@@ -51,8 +63,20 @@ public class AuthService : IAuthService
 
     public async Task<Models.User?> GetMe(int userId)
     {
-        return await dbContext.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(u => u.Id == userId);
+        using var db = _context.CreateConnection();
+
+        var users = await db.QueryAsync<Models.User, Models.Role, Models.User>(
+            @"SELECT u.*, r.Id, r.Name FROM Users u
+              INNER JOIN Roles r ON r.Id = u.RoleId
+              WHERE u.Id = @UserId AND u.deleted_at IS NULL",
+            (user, role) =>
+            {
+                user.Role = role;
+                return user;
+            },
+            new { UserId = userId },
+            splitOn: "Id");
+
+        return users.FirstOrDefault();
     }
 }

@@ -6,11 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using backend.Data;
 using backend.Models;
 using backend.DTOs.User;
-using Microsoft.EntityFrameworkCore;
 using backend.DTOs.Api;
 using backend.Wrapper;
 using backend.Middleware;
-using Microsoft.AspNetCore.Authorization;
 
 namespace backend.Features.User
 {

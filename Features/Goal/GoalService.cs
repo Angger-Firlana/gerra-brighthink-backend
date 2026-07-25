@@ -4,70 +4,85 @@ using backend.DTOs.Goal;
 using backend.Enum;
 using backend.Features.ActivityLog;
 using backend.Wrapper;
-using Microsoft.EntityFrameworkCore;
+using Dapper;
 
 namespace backend.Features.Goal;
 
 public class GoalService : IGoalService
 {
-    private readonly AppDbContext dbContext;
+    private readonly DapperContext _context;
     private readonly IActivityLogService activityLog;
 
-    public GoalService(AppDbContext dbContext, IActivityLogService activityLog)
+    public GoalService(DapperContext context, ActivityLog.IActivityLogService activityLog)
     {
-        this.dbContext = dbContext;
+        _context = context;
         this.activityLog = activityLog;
     }
 
     public async Task<PagedResult<Models.Goal>> Index(GoalFilteringRequest filter, int userId)
     {
-        var baseQuery = dbContext.Goals
-            .Where(g => g.UserId == userId && g.DeletedAt == null);
+        using var db = _context.CreateConnection();
+
+        var where = new List<string> { "g.deleted_at IS NULL", "g.UserId = @UserId" };
+        var pars = new DynamicParameters();
+        pars.Add("UserId", userId);
 
         if (!string.IsNullOrWhiteSpace(filter.search))
-            baseQuery = baseQuery.Where(g => g.Title.Contains(filter.search));
-
+        {
+            where.Add("g.Title LIKE @Search");
+            pars.Add("Search", $"%{filter.search}%");
+        }
         if (!string.IsNullOrWhiteSpace(filter.status) && int.TryParse(filter.status, out var status))
-            baseQuery = baseQuery.Where(g => (int)g.Status == status);
-
+        {
+            where.Add("g.Status = @Status");
+            pars.Add("Status", status);
+        }
         if (!string.IsNullOrWhiteSpace(filter.typeGoal))
-            baseQuery = baseQuery.Where(g => g.TypeGoal == filter.typeGoal);
+        {
+            where.Add("g.TypeGoal = @TypeGoal");
+            pars.Add("TypeGoal", filter.typeGoal);
+        }
 
-        var totalItems = await baseQuery.CountAsync();
+        var whereClause = string.Join(" AND ", where);
+
+        var totalItems = await db.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM Goals g WHERE {whereClause}", pars);
+
         var page = filter.page > 0 ? filter.page : 1;
         var pageSize = filter.pageSize > 0 ? filter.pageSize : 10;
+        var offset = (page - 1) * pageSize;
 
-        // Single query: select Goal + task count from DB without loading Tasks into memory
-        var goalIds = await baseQuery
-            .OrderByDescending(g => g.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(g => g.Id)
-            .ToListAsync();
+        pars.Add("Limit", pageSize);
+        pars.Add("Offset", offset);
 
-        var taskCounts = await dbContext.Tasks
-            .Where(t => goalIds.Contains(t.GoalId!.Value) && t.DeletedAt == null)
-            .GroupBy(t => t.GoalId!.Value)
-            .Select(g => new { GoalId = g.Key, Total = g.Count(), Done = g.Count(t => t.Status == TodoStatus.Completed) })
-            .ToDictionaryAsync(x => x.GoalId, x => (x.Total, x.Done));
+        var goals = (await db.QueryAsync<Models.Goal>(
+            $"SELECT * FROM Goals g WHERE {whereClause} ORDER BY g.created_at DESC LIMIT @Limit OFFSET @Offset",
+            pars)).AsList();
 
-        var goals = await dbContext.Goals
-            .Where(g => goalIds.Contains(g.Id))
-            .OrderByDescending(g => g.CreatedAt)
-            .ToListAsync();
-
-        var result = goals.Select(g =>
+        // Attach TaskCount and DoneCount per goal
+        if (goals.Count > 0)
         {
-            var (total, done) = taskCounts.TryGetValue(g.Id, out var t) ? t : (0, 0);
-            g.TaskCount = total;
-            g.DoneCount = done;
-            g.Tasks = null;
-            return g;
-        }).ToList();
+            var goalIds = goals.Select(g => g.Id).ToList();
+            var counts = (await db.QueryAsync(
+                @"SELECT GoalId AS Id, COUNT(*) AS Total, SUM(CASE WHEN Status = @Done THEN 1 ELSE 0 END) AS Done
+                  FROM Tasks
+                  WHERE GoalId IN @Ids AND deleted_at IS NULL
+                  GROUP BY GoalId",
+                new { Done = (int)TodoStatus.Completed, Ids = goalIds })).ToDictionary(r => (int)r.Id, r => (Total: (int)r.Total, Done: (int)r.Done));
+
+            foreach (var g in goals)
+            {
+                if (counts.TryGetValue(g.Id, out var c))
+                {
+                    g.TaskCount = c.Total;
+                    g.DoneCount = c.Done;
+                }
+            }
+        }
 
         return new PagedResult<Models.Goal>
         {
-            Items = result,
+            Items = goals,
             pagination = new Pagination
             {
                 page = page,
@@ -82,9 +97,19 @@ public class GoalService : IGoalService
 
     public async Task<Models.Goal?> GetById(int id, int userId)
     {
-        return await dbContext.Goals
-            .Include(g => g.Tasks!.Where(t => t.DeletedAt == null))
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId && g.DeletedAt == null);
+        using var db = _context.CreateConnection();
+
+        var goal = await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id AND UserId = @UserId AND deleted_at IS NULL",
+            new { Id = id, UserId = userId });
+
+        if (goal is null) return null;
+
+        goal.Tasks = (await db.QueryAsync<Models.Task>(
+            "SELECT * FROM Tasks WHERE GoalId = @GoalId AND deleted_at IS NULL ORDER BY Id",
+            new { GoalId = id })).AsList();
+
+        return goal;
     }
 
     public async Task<Models.Goal> Create(CreateGoalRequest request, int userId)
@@ -92,19 +117,23 @@ public class GoalService : IGoalService
         if (string.IsNullOrWhiteSpace(request.Title))
             throw new ArgumentException("Goal title cannot be null or empty.");
 
-        var goal = new Models.Goal
-        {
-            UserId = userId,
-            Title = request.Title,
-            TypeGoal = request.TypeGoal,
-            Status = request.Status,
-            DueDate = request.DueDate,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+        using var db = _context.CreateConnection();
 
-        dbContext.Goals.Add(goal);
-        await dbContext.SaveChangesAsync();
+        var id = await db.ExecuteScalarAsync<int>(
+            @"INSERT INTO Goals (UserId, Title, TypeGoal, Status, DueDate, created_at, updated_at)
+              VALUES (@UserId, @Title, @TypeGoal, @Status, @DueDate, NOW(), NOW());
+              SELECT LAST_INSERT_ID();",
+            new
+            {
+                UserId = userId,
+                request.Title,
+                request.TypeGoal,
+                Status = (int)request.Status,
+                request.DueDate
+            });
+
+        var goal = (await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id", new { Id = id }))!;
 
         await activityLog.Log(userId, goal.Id, EntityType.Goal, "created");
 
@@ -113,58 +142,63 @@ public class GoalService : IGoalService
 
     public async Task<Models.Goal?> Update(int id, UpdateGoalRequest request, int userId)
     {
-        var goal = await dbContext.Goals
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId && g.DeletedAt == null);
+        using var db = _context.CreateConnection();
 
-        if (goal is null)
+        var existing = await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id AND UserId = @UserId AND deleted_at IS NULL",
+            new { Id = id, UserId = userId });
+
+        if (existing is null)
             throw new ArgumentException($"Goal with id {id} not found.");
 
-        if (!string.IsNullOrWhiteSpace(request.Title))
-            goal.Title = request.Title;
-        if (!string.IsNullOrWhiteSpace(request.TypeGoal))
-            goal.TypeGoal = request.TypeGoal;
-        if (request.Status.HasValue)
-            goal.Status = request.Status.Value;
-        if (request.DueDate.HasValue)
-            goal.DueDate = request.DueDate;
+        var sets = new List<string>();
+        var pars = new DynamicParameters();
+        pars.Add("Id", id);
 
-        goal.UpdatedAt = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(request.Title)) { sets.Add("Title = @Title"); pars.Add("Title", request.Title); }
+        if (!string.IsNullOrWhiteSpace(request.TypeGoal)) { sets.Add("TypeGoal = @TypeGoal"); pars.Add("TypeGoal", request.TypeGoal); }
+        if (request.Status.HasValue) { sets.Add("Status = @Status"); pars.Add("Status", (int)request.Status.Value); }
+        if (request.DueDate.HasValue) { sets.Add("DueDate = @DueDate"); pars.Add("DueDate", request.DueDate.Value); }
+
+        if (sets.Count == 0)
+        {
+            await activityLog.Log(userId, id, EntityType.Goal, "updated");
+            return existing;
+        }
+
+        sets.Add("updated_at = NOW()");
+        await db.ExecuteAsync($"UPDATE Goals SET {string.Join(", ", sets)} WHERE Id = @Id", pars);
 
         await activityLog.Log(userId, id, EntityType.Goal, "updated");
 
-        return goal;
+        return await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id", new { Id = id });
     }
 
     public async Task<bool> SoftDelete(int id, int userId)
     {
-        var goal = await dbContext.Goals
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId && g.DeletedAt == null);
-
-        if (goal is null)
+        using var db = _context.CreateConnection();
+        var existing = await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id AND UserId = @UserId AND deleted_at IS NULL",
+            new { Id = id, UserId = userId });
+        if (existing is null)
             throw new ArgumentException($"Goal with id {id} not found.");
 
-        goal.DeletedAt = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-
+        await db.ExecuteAsync("UPDATE Goals SET deleted_at = NOW() WHERE Id = @Id", new { Id = id });
         await activityLog.Log(userId, id, EntityType.Goal, "deleted");
-
         return true;
     }
 
     public async Task<bool> Delete(int id, int userId)
     {
-        var goal = await dbContext.Goals
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
-
-        if (goal is null)
+        using var db = _context.CreateConnection();
+        var existing = await db.QueryFirstOrDefaultAsync<Models.Goal>(
+            "SELECT * FROM Goals WHERE Id = @Id AND UserId = @UserId", new { Id = id, UserId = userId });
+        if (existing is null)
             throw new ArgumentException($"Goal with id {id} not found.");
 
-        dbContext.Goals.Remove(goal);
-        await dbContext.SaveChangesAsync();
-
+        await db.ExecuteAsync("DELETE FROM Goals WHERE Id = @Id", new { Id = id });
         await activityLog.Log(userId, id, EntityType.Goal, "deleted_hard");
-
         return true;
     }
 }

@@ -1,5 +1,4 @@
 using backend.Data;
-using Microsoft.EntityFrameworkCore;
 using backend.Features.User;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -81,9 +80,7 @@ builder.Services.AddSwaggerGen(c=>
 });
 
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), new MySqlServerVersion(new Version(8, 0, 33)))
-);
+builder.Services.AddSingleton<DapperContext>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
