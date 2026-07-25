@@ -3,6 +3,7 @@ using backend.DTOs.Api;
 using backend.DTOs.Goal;
 using backend.Enum;
 using backend.Features.ActivityLog;
+using backend.Helpers;
 using backend.Wrapper;
 using Dapper;
 
@@ -23,27 +24,12 @@ public class GoalService : IGoalService
     {
         using var db = _context.CreateConnection();
 
-        var where = new List<string> { "g.deleted_at IS NULL", "g.UserId = @UserId" };
-        var pars = new DynamicParameters();
-        pars.Add("UserId", userId);
-
-        if (!string.IsNullOrWhiteSpace(filter.search))
-        {
-            where.Add("g.Title LIKE @Search");
-            pars.Add("Search", $"%{filter.search}%");
-        }
-        if (!string.IsNullOrWhiteSpace(filter.status) && int.TryParse(filter.status, out var status))
-        {
-            where.Add("g.Status = @Status");
-            pars.Add("Status", status);
-        }
-        if (!string.IsNullOrWhiteSpace(filter.typeGoal))
-        {
-            where.Add("g.TypeGoal = @TypeGoal");
-            pars.Add("TypeGoal", filter.typeGoal);
-        }
-
-        var whereClause = string.Join(" AND ", where);
+        var (whereClause, pars) = SqlHelper.Where("g.deleted_at IS NULL")
+            .Add("g.UserId = @UserId", "UserId", userId)
+            .Add("g.Title LIKE @Search", "Search", filter.search is { Length: >0 } s ? $"%{s}%" : null)
+            .AddInt("g.Status", "Status", filter.status)
+            .Add("g.TypeGoal = @TypeGoal", "TypeGoal", filter.typeGoal)
+            .Build();
 
         var totalItems = await db.ExecuteScalarAsync<int>(
             $"SELECT COUNT(*) FROM Goals g WHERE {whereClause}", pars);
@@ -151,24 +137,15 @@ public class GoalService : IGoalService
         if (existing is null)
             throw new ArgumentException($"Goal with id {id} not found.");
 
-        var sets = new List<string>();
-        var pars = new DynamicParameters();
-        pars.Add("Id", id);
+        var (sql, pars) = SqlHelper.Update("Goals")
+            .Set("Title", "Title", request.Title is { Length: >0 } t ? t : null)
+            .Set("TypeGoal", "TypeGoal", request.TypeGoal is { Length: >0 } ty ? ty : null)
+            .Set("Status", "Status", request.Status.HasValue ? (int)request.Status.Value : null)
+            .Set("DueDate", "DueDate", request.DueDate)
+            .Where("Id = @Id", new { Id = id })
+            .Build();
 
-        if (!string.IsNullOrWhiteSpace(request.Title)) { sets.Add("Title = @Title"); pars.Add("Title", request.Title); }
-        if (!string.IsNullOrWhiteSpace(request.TypeGoal)) { sets.Add("TypeGoal = @TypeGoal"); pars.Add("TypeGoal", request.TypeGoal); }
-        if (request.Status.HasValue) { sets.Add("Status = @Status"); pars.Add("Status", (int)request.Status.Value); }
-        if (request.DueDate.HasValue) { sets.Add("DueDate = @DueDate"); pars.Add("DueDate", request.DueDate.Value); }
-
-        if (sets.Count == 0)
-        {
-            await activityLog.Log(userId, id, EntityType.Goal, "updated");
-            return existing;
-        }
-
-        sets.Add("updated_at = NOW()");
-        await db.ExecuteAsync($"UPDATE Goals SET {string.Join(", ", sets)} WHERE Id = @Id", pars);
-
+        await db.ExecuteAsync(sql, pars);
         await activityLog.Log(userId, id, EntityType.Goal, "updated");
 
         return await db.QueryFirstOrDefaultAsync<Models.Goal>(

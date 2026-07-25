@@ -12,6 +12,8 @@ public class CreateTaskRequest
     public int? GoalId { get; set; }
     public int? TaskCategoryId { get; set; }
     public DateTime? DueDate { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
     public List<CreateSubTaskRequest>? SubTasks { get; set; }
 }
 
@@ -25,6 +27,8 @@ public class UpdateTaskRequest
     public int? GoalId { get; set; }
     public int? TaskCategoryId { get; set; }
     public DateTime? DueDate { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
 }
 
 public class CreateSubTaskRequest

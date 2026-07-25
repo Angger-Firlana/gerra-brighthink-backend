@@ -1,0 +1,2 @@
+ALTER TABLE Tasks ADD COLUMN StartTime time NULL AFTER DueDate;
+ALTER TABLE Tasks ADD COLUMN EndTime time NULL AFTER StartTime;

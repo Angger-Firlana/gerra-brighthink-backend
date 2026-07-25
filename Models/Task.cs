@@ -18,6 +18,8 @@ public class Task
     public string Priority {get; set;} = string.Empty;
     public string TypeHabbit {get; set;} = string.Empty;
     public DateTime? DueDate {get; set;}
+    public TimeSpan? StartTime {get; set;}
+    public TimeSpan? EndTime {get; set;}
     public List<SubTask>? SubTasks {get; set;}
 
     [Column("created_at")]

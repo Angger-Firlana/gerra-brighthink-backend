@@ -3,6 +3,7 @@ using backend.DTOs.Api;
 using backend.DTOs.Task;
 using backend.Enum;
 using backend.Features.ActivityLog;
+using backend.Helpers;
 using backend.Wrapper;
 using Dapper;
 
@@ -23,52 +24,25 @@ public class TaskService : ITaskService
     {
         using var db = _context.CreateConnection();
 
-        var where = new List<string> { "t.deleted_at IS NULL", "t.UserId = @UserId" };
-        var pars = new DynamicParameters();
-        pars.Add("UserId", userId);
+        var (whereClause, pars) = SqlHelper.Where("t.deleted_at IS NULL")
+            .Add("t.UserId = @UserId", "UserId", userId)
+            .Add("(t.Title LIKE @Search OR t.Description LIKE @Search)", "Search", filter.search is { Length: >0 } s ? $"%{s}%" : null)
+            .AddInt("t.Status", "Status", filter.status)
+            .Add("t.Priority = @Priority", "Priority", filter.priority)
+            .Build();
 
-        if (!string.IsNullOrWhiteSpace(filter.search))
-        {
-            where.Add("(t.Title LIKE @Search OR t.Description LIKE @Search)");
-            pars.Add("Search", $"%{filter.search}%");
-        }
-        if (!string.IsNullOrWhiteSpace(filter.status) && int.TryParse(filter.status, out var status))
-        {
-            where.Add("t.Status = @Status");
-            pars.Add("Status", status);
-        }
-        if (!string.IsNullOrWhiteSpace(filter.priority))
-        {
-            where.Add("t.Priority = @Priority");
-            pars.Add("Priority", filter.priority);
-        }
-        if (filter.goalId > 0)
-        {
-            where.Add("t.GoalId = @GoalId");
-            pars.Add("GoalId", filter.goalId);
-        }
-
-        var whereClause = string.Join(" AND ", where);
-
-        var countSql = $"SELECT COUNT(*) FROM Tasks t WHERE {whereClause}";
-        var totalItems = await db.ExecuteScalarAsync<int>(countSql, pars);
+        var totalItems = await db.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM Tasks t WHERE {whereClause}", pars);
 
         var page = filter.page > 0 ? filter.page : 1;
         var pageSize = filter.pageSize > 0 ? filter.pageSize : 10;
         var offset = (page - 1) * pageSize;
 
-        var dataSql = $@"
-            SELECT t.*
-            FROM Tasks t
-            WHERE {whereClause}
-            ORDER BY t.created_at DESC
-            LIMIT @Limit OFFSET @Offset";
         pars.Add("Limit", pageSize);
         pars.Add("Offset", offset);
 
-        var tasks = (await db.QueryAsync<Models.Task>(dataSql, pars)).AsList();
+        var tasks = (await db.QueryAsync<Models.Task>(
+            $"SELECT t.* FROM Tasks t WHERE {whereClause} ORDER BY t.created_at DESC LIMIT @Limit OFFSET @Offset", pars)).AsList();
 
-        // Load related data per task — TaskCategory, Goal, SubTasks
         var taskIds = tasks.Select(t => t.Id).ToList();
 
         if (taskIds.Count > 0)
@@ -136,8 +110,8 @@ public class TaskService : ITaskService
         using var db = _context.CreateConnection();
 
         var sql = @"
-            INSERT INTO Tasks (UserId, Title, Description, Status, Priority, TypeHabbit, GoalId, TaskCategoryId, DueDate, created_at, updated_at)
-            VALUES (@UserId, @Title, @Description, @Status, @Priority, @TypeHabbit, @GoalId, @TaskCategoryId, @DueDate, NOW(), NOW());
+            INSERT INTO Tasks (UserId, Title, Description, Status, Priority, TypeHabbit, GoalId, TaskCategoryId, DueDate, StartTime, EndTime, created_at, updated_at)
+            VALUES (@UserId, @Title, @Description, @Status, @Priority, @TypeHabbit, @GoalId, @TaskCategoryId, @DueDate, @StartTime, @EndTime, NOW(), NOW());
             SELECT LAST_INSERT_ID();";
 
         var id = await db.ExecuteScalarAsync<int>(sql, new
@@ -150,7 +124,9 @@ public class TaskService : ITaskService
             TypeHabbit = request.TypeHabbit ?? string.Empty,
             request.GoalId,
             request.TaskCategoryId,
-            request.DueDate
+            request.DueDate,
+            request.StartTime,
+            request.EndTime
         });
 
         // Insert subTasks
@@ -184,28 +160,21 @@ public class TaskService : ITaskService
         if (existing is null)
             throw new ArgumentException($"Task with id {id} not found.");
 
-        var sets = new List<string>();
-        var pars = new DynamicParameters();
-        pars.Add("Id", id);
+        var (sql, pars) = SqlHelper.Update("Tasks")
+            .Set("Title", "Title", request.Title is { Length: >0 } t ? t : null)
+            .Set("Description", "Description", request.Description)
+            .Set("Status", "Status", request.Status.HasValue ? (int)request.Status.Value : null)
+            .Set("Priority", "Priority", request.Priority is { Length: >0 } p ? p : null)
+            .Set("TypeHabbit", "TypeHabbit", request.TypeHabbit)
+            .Set("GoalId", "GoalId", request.GoalId.HasValue ? request.GoalId.Value : null)
+            .Set("TaskCategoryId", "TaskCategoryId", request.TaskCategoryId.HasValue ? request.TaskCategoryId.Value : null)
+            .Set("DueDate", "DueDate", request.DueDate)
+            .Set("StartTime", "StartTime", request.StartTime)
+            .Set("EndTime", "EndTime", request.EndTime)
+            .Where("Id = @Id", new { Id = id })
+            .Build();
 
-        if (!string.IsNullOrWhiteSpace(request.Title)) { sets.Add("Title = @Title"); pars.Add("Title", request.Title); }
-        if (request.Description is not null) { sets.Add("Description = @Description"); pars.Add("Description", request.Description); }
-        if (request.Status.HasValue) { sets.Add("Status = @Status"); pars.Add("Status", (int)request.Status.Value); }
-        if (!string.IsNullOrWhiteSpace(request.Priority)) { sets.Add("Priority = @Priority"); pars.Add("Priority", request.Priority); }
-        if (request.TypeHabbit is not null) { sets.Add("TypeHabbit = @TypeHabbit"); pars.Add("TypeHabbit", request.TypeHabbit); }
-        if (request.GoalId.HasValue) { sets.Add("GoalId = @GoalId"); pars.Add("GoalId", request.GoalId.Value); }
-        if (request.TaskCategoryId.HasValue) { sets.Add("TaskCategoryId = @TaskCategoryId"); pars.Add("TaskCategoryId", request.TaskCategoryId.Value); }
-        if (request.DueDate.HasValue) { sets.Add("DueDate = @DueDate"); pars.Add("DueDate", request.DueDate.Value); }
-
-        if (sets.Count == 0)
-        {
-            await activityLog.Log(userId, id, EntityType.Task, "updated");
-            return existing;
-        }
-
-        sets.Add("updated_at = NOW()");
-        await db.ExecuteAsync($"UPDATE Tasks SET {string.Join(", ", sets)} WHERE Id = @Id", pars);
-
+        await db.ExecuteAsync(sql, pars);
         await activityLog.Log(userId, id, EntityType.Task, "updated");
 
         return await db.QueryFirstOrDefaultAsync<Models.Task>(
