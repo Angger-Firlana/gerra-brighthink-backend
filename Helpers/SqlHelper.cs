@@ -72,7 +72,7 @@ public class UpdateBuilder
     private readonly List<string> _sets = [];
     private readonly DynamicParameters _params = new();
     private string? _where;
-    private DynamicParameters? _whereParams;
+    private Object? _whereParams;
 
     public UpdateBuilder(string table) => _table = table;
 
@@ -92,11 +92,7 @@ public class UpdateBuilder
     public UpdateBuilder Where(string clause, object? parameters = null)
     {
         _where = clause;
-        if (parameters is not null)
-        {
-            _whereParams = new DynamicParameters();
-            _whereParams.AddDynamicParams(parameters);
-        }
+        _whereParams = parameters;
         return this;
     }
 
@@ -114,8 +110,7 @@ public class UpdateBuilder
         var combined = _params;
         if (_whereParams is not null)
         {
-            foreach (var p in _whereParams.ParameterNames)
-                combined.Add(p, _whereParams.Get<object>(p));
+            _params.AddDynamicParams(_whereParams);
         }
 
         return (sb.ToString(), combined);
